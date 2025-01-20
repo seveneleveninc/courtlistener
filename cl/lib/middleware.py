@@ -4,6 +4,7 @@ from asgiref.sync import iscoroutinefunction, markcoroutinefunction
 from django.http import HttpRequest, HttpResponseBase
 from django.template.response import TemplateResponse
 from waffle import flag_is_active
+from waffle.models import Flag
 
 
 class RobotsHeaderMiddleware:
@@ -80,7 +81,7 @@ class IncrementalNewTemplateMiddleware:
         return response
 
     def process_template_response(self, request, response):
-        use_new_design = flag_is_active(request, "use_new_design")
+        use_new_design = self._flag_is_active(request, "use_new_design")
 
         if use_new_design and isinstance(response, TemplateResponse):
             old_template = response.template_name
@@ -89,3 +90,11 @@ class IncrementalNewTemplateMiddleware:
                 response.template_name = [new_template, old_template]
 
         return response
+
+    def _flag_is_active(self, request, flag_name):
+        if Flag.objects.filter(name=flag_name).exists():
+            return flag_is_active(request, flag_name)
+        else:
+            # The flag doesn't exist in the DB, so we default to False
+            # and avoid creating it automatically.
+            return False
