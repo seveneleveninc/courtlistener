@@ -338,6 +338,10 @@ class CoverageTests(ESIndexTestCase, TestCase):
 
 
 @mock.patch(
+    "cl.lib.middleware.IncrementalNewTemplateMiddleware._flag_is_active",
+    return_value=False,
+)  # TODO: remove this patch once we get rid of IncrementalNewTemplateMiddleware
+@mock.patch(
     "cl.api.utils.get_logging_prefix",
     return_value="api:test_counts",
 )
@@ -389,13 +393,15 @@ class ApiQueryCountTests(TransactionTestCase):
     def tearDown(self) -> None:
         UserProfile.objects.all().delete()
 
-    def test_audio_api_query_counts(self, mock_logging_prefix) -> None:
+    def test_audio_api_query_counts(
+        self, mock_logging_prefix, mock_flag_is_active
+    ) -> None:
         with self.assertNumQueries(4):
             path = reverse("audio-list", kwargs={"version": "v3"})
             self.client.get(path)
 
     def test_no_bad_query_on_empty_parameters(
-        self, mock_logging_prefix
+        self, mock_logging_prefix, mock_flag_is_active
     ) -> None:
         with CaptureQueriesContext(connection) as ctx:
             # Test issue 2066, ensuring that we ignore empty filters.
@@ -409,7 +415,9 @@ class ApiQueryCountTests(TransactionTestCase):
                         f"banished: {bad_query=}"
                     )
 
-    def test_search_api_query_counts(self, mock_logging_prefix) -> None:
+    def test_search_api_query_counts(
+        self, mock_logging_prefix, mock_flag_is_active
+    ) -> None:
         with self.assertNumQueries(7):
             path = reverse("docket-list", kwargs={"version": "v3"})
             self.client.get(path)
@@ -430,17 +438,23 @@ class ApiQueryCountTests(TransactionTestCase):
             path = reverse("opinion-list", kwargs={"version": "v3"})
             self.client.get(path)
 
-    def test_party_endpoint_query_counts(self, mock_logging_prefix) -> None:
+    def test_party_endpoint_query_counts(
+        self, mock_logging_prefix, mock_flag_is_active
+    ) -> None:
         with self.assertNumQueries(9):
             path = reverse("party-list", kwargs={"version": "v3"})
             self.client.get(path)
 
-    def test_attorney_endpoint_query_counts(self, mock_logging_prefix) -> None:
+    def test_attorney_endpoint_query_counts(
+        self, mock_logging_prefix, mock_flag_is_active
+    ) -> None:
         with self.assertNumQueries(6):
             path = reverse("attorney-list", kwargs={"version": "v3"})
             self.client.get(path)
 
-    def test_recap_api_query_counts(self, mock_logging_prefix) -> None:
+    def test_recap_api_query_counts(
+        self, mock_logging_prefix, mock_flag_is_active
+    ) -> None:
         with self.assertNumQueries(3):
             path = reverse("processingqueue-list", kwargs={"version": "v3"})
             self.client.get(path)
@@ -449,14 +463,18 @@ class ApiQueryCountTests(TransactionTestCase):
             path = reverse("fast-recapdocument-list", kwargs={"version": "v3"})
             self.client.get(path, {"pacer_doc_id": "17711118263"})
 
-    def test_recap_api_required_filter(self, mock_logging_prefix) -> None:
+    def test_recap_api_required_filter(
+        self, mock_logging_prefix, mock_flag_is_active
+    ) -> None:
         path = reverse("fast-recapdocument-list", kwargs={"version": "v3"})
         r = self.client.get(path, {"pacer_doc_id": "17711118263"})
         self.assertEqual(r.status_code, HTTPStatus.OK)
         r = self.client.get(path, {"pacer_doc_id__in": "17711118263,asdf"})
         self.assertEqual(r.status_code, HTTPStatus.OK)
 
-    def test_count_on_query_counts(self, mock_logging_prefix) -> None:
+    def test_count_on_query_counts(
+        self, mock_logging_prefix, mock_flag_is_active
+    ) -> None:
         """
         Check that a v4 API request with param `count=on` only performs
         2 queries to the database: one to check the authenticated user,
@@ -488,7 +506,7 @@ class ApiQueryCountTests(TransactionTestCase):
             )
 
     def test_standard_request_no_count_query(
-        self, mock_logging_prefix
+        self, mock_logging_prefix, mock_flag_is_active
     ) -> None:
         """
         Check that a v4 API request without param `count=on` doesn't perform

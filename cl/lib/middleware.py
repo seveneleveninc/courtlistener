@@ -71,6 +71,7 @@ class IncrementalNewTemplateMiddleware:
     and NOT in "help/v2_index.html".
 
     TODO: Remove this middleware once new design is completely rolled out.
+    When this is removed, also clean up patched ApiQueryCountTests.
     """
 
     def __init__(self, get_response):
